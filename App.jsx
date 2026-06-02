@@ -236,7 +236,8 @@ function TabCalc({ loadFn }) {
   const [mlTarget,   setMlTarget]   = useState("");
   const [saveName,   setSaveName]   = useState("");
   const [editingId,  setEditingId]  = useState(null);
-  const [waterPct,   setWaterPct]   = useState(null);  // null = collapsed
+  const [waterPct,   setWaterPct]   = useState(null);  // null = not calculated
+  const [waterOpen,  setWaterOpen]  = useState(false); // show detail panel
   const [scaleOpen,  setScaleOpen]  = useState(false); // collapsed by default
 
   // Persist scale mode
@@ -252,6 +253,7 @@ function TabCalc({ loadFn }) {
       setSaveName("");
       setEditingId(null);
       setWaterPct(null);
+      setWaterOpen(false);
       setScaleOpen(false);
     };
   });
@@ -297,16 +299,14 @@ function TabCalc({ loadFn }) {
 
       {/* ── Metrics row (compact, pure display) ── */}
       <div className="flex gap-2">
-        <div className="flex-1 bg-zinc-800/80 rounded-xl px-3 py-2 flex items-baseline gap-1.5">
-          <span className="text-[10px] text-zinc-500">ABV</span>
-          <span className="text-3xl font-bold text-white font-mono leading-none">{abv}</span>
-          <span className="text-base text-zinc-400">%</span>
+        <div className="flex-1 bg-zinc-800/80 rounded-xl px-3 py-2">
+          <div className="text-[10px] text-zinc-500 mb-0.5">ABV</div>
+          <div className="text-3xl font-bold text-white font-mono leading-none">{abv}<span className="text-3xl font-bold text-zinc-400">%</span></div>
         </div>
-        <div className="flex-1 bg-zinc-800/80 rounded-xl px-3 py-2 flex items-baseline gap-1.5">
-          <span className="text-[10px] text-zinc-500">Total</span>
-          <span className="text-3xl font-bold text-white font-mono leading-none">{total}</span>
-          <span className="text-base text-zinc-400">ml</span>
-          <span className="text-xs text-zinc-500 ml-0.5">{mlToOz(total)}oz</span>
+        <div className="flex-1 bg-zinc-800/80 rounded-xl px-3 py-2">
+          <div className="text-[10px] text-zinc-500 mb-0.5">Total</div>
+          <div className="text-3xl font-bold text-white font-mono leading-none">{total}<span className="text-3xl font-bold text-zinc-400">ml</span></div>
+          <div className="text-sm font-bold text-zinc-500 font-mono mt-0.5">{mlToOz(total)}<span className="text-sm font-bold text-zinc-500">oz</span></div>
         </div>
       </div>
       <ABVBar abv={abv} />
@@ -380,33 +380,52 @@ function TabCalc({ loadFn }) {
       {/* ── Water suggestion ── */}
       <div className="bg-zinc-800/60 border border-white/8 rounded-xl px-3 py-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-zinc-400">稀釋水建議（10–15%）</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-400">稀釋水建議</span>
+            {/* Summary when calculated but collapsed */}
+            {waterPct !== null && !waterOpen && (
+              <span className="text-xs font-mono text-amber-400">
+                {waterPct}%  ·  {waterSuggestion.chosen}ml
+              </span>
+            )}
+          </div>
           {waterPct === null ? (
-            <button onClick={() => setWaterPct(12)}
-              className="text-xs text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg active:bg-amber-500/10">
+            <button onClick={() => { setWaterPct(12); setWaterOpen(true); }}
+              className="text-xs text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg active:bg-amber-500/10 min-w-[48px] text-center">
               計算
             </button>
           ) : (
-            <div className="flex items-center gap-1.5">
+            <button onClick={() => setWaterOpen(o => !o)}
+              className="text-xs text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg active:bg-amber-500/10 min-w-[48px] text-center">
+              {waterOpen ? "收起" : "調整"}
+            </button>
+          )}
+        </div>
+
+        {/* Expandable body */}
+        {waterOpen && waterSuggestion && (
+          <div className="mt-2.5">
+            <div className="flex gap-1.5 mb-2.5">
               {[10, 12, 15].map(p => (
                 <button key={p} onClick={() => setWaterPct(p)}
-                  className={`text-xs px-2 py-1 rounded-lg border transition-all ${waterPct === p ? "bg-amber-500 border-amber-500 text-black font-bold" : "border-zinc-700 text-zinc-400 active:bg-white/5"}`}>
+                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${waterPct === p ? "bg-amber-500 border-amber-500 text-black font-bold" : "border-zinc-700 text-zinc-400 active:bg-white/5"}`}>
                   {p}%
                 </button>
               ))}
-              <button onClick={() => setWaterPct(null)} className="text-zinc-600 text-xs ml-1">✕</button>
+              <button onClick={() => { setWaterPct(null); setWaterOpen(false); }}
+                className="text-xs text-zinc-500 border border-zinc-700 px-2.5 py-1.5 rounded-lg active:bg-white/5 ml-auto">
+                清除
+              </button>
             </div>
-          )}
-        </div>
-        {waterSuggestion && (
-          <div className="flex gap-2 mt-2">
-            <div className="flex-1 bg-zinc-900/60 rounded-lg p-2 text-center">
-              <div className="text-[9px] text-zinc-500 mb-0.5">建議範圍</div>
-              <div className="text-sm font-bold font-mono text-blue-400">{waterSuggestion.lo}–{waterSuggestion.hi} ml</div>
-            </div>
-            <div className="flex-1 bg-zinc-900/60 rounded-lg p-2 text-center">
-              <div className="text-[9px] text-zinc-500 mb-0.5">選擇 {waterPct}%</div>
-              <div className="text-sm font-bold font-mono text-amber-400">{waterSuggestion.chosen} ml</div>
+            <div className="flex gap-2">
+              <div className="flex-1 bg-zinc-900/60 rounded-lg p-2 text-center">
+                <div className="text-[9px] text-zinc-500 mb-0.5">建議範圍</div>
+                <div className="text-sm font-bold font-mono text-blue-400">{waterSuggestion.lo}–{waterSuggestion.hi}ml</div>
+              </div>
+              <div className="flex-1 bg-zinc-900/60 rounded-lg p-2 text-center">
+                <div className="text-[9px] text-zinc-500 mb-0.5">選擇 {waterPct}%</div>
+                <div className="text-sm font-bold font-mono text-amber-400">{waterSuggestion.chosen}ml</div>
+              </div>
             </div>
           </div>
         )}
@@ -441,9 +460,9 @@ function TabCalc({ loadFn }) {
                   className={ingInputCls} />
                 {/* Pure display: scaled result */}
                 <div className="flex items-center justify-center gap-1 mt-1">
-                  <span className="text-[10px] font-bold font-mono text-blue-400 bg-blue-500/15 px-1.5 py-0.5 rounded">{scaledAmt}</span>
+                  <span className="text-[10px] font-bold font-mono text-blue-400 bg-blue-500/15 px-1.5 py-0.5 rounded">{scaledAmt}ml</span>
                   <span className="text-[9px] text-zinc-600">/</span>
-                  <span className="text-[10px] font-bold font-mono text-violet-400 bg-violet-500/15 px-1.5 py-0.5 rounded">{mlToOz(scaledAmt)}</span>
+                  <span className="text-[10px] font-bold font-mono text-violet-400 bg-violet-500/15 px-1.5 py-0.5 rounded">{mlToOz(scaledAmt)}oz</span>
                 </div>
               </div>
               <button onClick={() => removeIng(ing.id)}
