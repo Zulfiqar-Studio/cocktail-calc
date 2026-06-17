@@ -245,13 +245,13 @@ function TabCalc({ loadFn }) {
 
   // Expose load handler — fixed ref pattern
   useEffect(() => {
-    loadFn.current = recipe => {
+    loadFn.current = (recipe, mode = "load") => {
       setIngredients(recipe.ingredients.map((i, idx) => ({ ...i, id: idx + 1 })));
       _nextId = recipe.ingredients.length + 10;
       setCups("1");
       setMlTarget("");
-      setSaveName("");
-      setEditingId(null);
+      setSaveName(mode === "edit" ? recipe.name : "");
+      setEditingId(mode === "edit" ? recipe.id : null);
       setWaterPct(null);
       setWaterOpen(false);
       setScaleOpen(false);
@@ -480,10 +480,10 @@ function TabCalc({ loadFn }) {
           <input value={saveName} onChange={e => setSaveName(e.target.value)}
             placeholder="酒譜名稱…"
             className="flex-1 h-9 px-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40" />
-          <button onClick={saveRecipe}
-            className="h-9 px-3 rounded-lg bg-amber-500 text-black text-xs font-bold active:bg-amber-600 whitespace-nowrap">
-            儲存
-          </button>
+      <button onClick={saveRecipe}
+        className="h-9 px-3 rounded-lg bg-amber-500 text-black text-xs font-bold active:bg-amber-600 whitespace-nowrap">
+        {editingId ? "更新" : "儲存"}
+      </button>
         </div>
       </div>
     </div>
@@ -538,7 +538,7 @@ function TabSpecial() {
 // TAB: MY RECIPES
 // ═══════════════════════════════════════════════════════════════
 
-function TabMine({ onLoad }) {
+function TabMine({ onLoad, onEdit }) {
   const [recipes, setRecipes] = useState(loadStored);
 
   useEffect(() => {
@@ -558,7 +558,7 @@ function TabMine({ onLoad }) {
       還沒有儲存的酒譜<br />在計算機頁面儲存你的創作！
     </div>
   );
-  return <>{recipes.map(r => <RecipeCard key={r.id} recipe={r} onLoad={onLoad} onDelete={deleteRecipe} />)}</>;
+  return <>{recipes.map(r => <RecipeCard key={r.id} recipe={r} onLoad={onLoad} onEdit={onEdit} onDelete={deleteRecipe} />)}</>;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -580,6 +580,11 @@ export default function App() {
     setActiveTab("calc");
     // Wait for TabCalc to mount, then load
     setTimeout(() => { if (loadFn.current) loadFn.current(recipe); }, 80);
+  }, []);
+
+  const handleEdit = useCallback(recipe => {
+    setActiveTab("calc");
+    setTimeout(() => { if (loadFn.current) loadFn.current(recipe, "edit"); }, 80);
   }, []);
 
   return (
@@ -612,7 +617,7 @@ export default function App() {
           {activeTab === "calc"    && <TabCalc    loadFn={loadFn} />}
           {activeTab === "lib"     && <TabLib     onLoad={handleLoad} />}
           {activeTab === "special" && <TabSpecial />}
-          {activeTab === "mine"    && <TabMine    onLoad={handleLoad} />}
+          {activeTab === "mine"    && <TabMine    onLoad={handleLoad} onEdit={handleEdit} />}
         </main>
 
         {/* Bottom nav */}
